@@ -32,6 +32,7 @@ stages:
                 
                 Install-Module Az.Resources -RequiredVersion 1.12.1-preview -AllowPrerelease -Force -Scope CurrentUser
           - task: AzurePowerShell@5
+            displayName: "WhatIf"
             inputs:
               azureSubscription: 'ARM Service connection'
               ScriptType: 'InlineScript'
@@ -41,7 +42,7 @@ stages:
                 
                 $Parameters = @{
                   ResourcegroupName     = "ssp2020rg"
-                  Templatefile          = "https://raw.githubusercontent.com/Neorath/ssp2020templates/master/template.json"
+                  Templatefile          = "https:\\raw.githubusercontent.com\Neorath\ssp2020templates\master\template.json"
                   Mode                  = 'Incremental'
                  }
                 $Result = Get-AzResourceGroupDeploymentWhatIfResult @Parameters
