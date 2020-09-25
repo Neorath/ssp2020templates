@@ -51,8 +51,18 @@ stages:
             displayName: "Check for deletion"
             inputs:
               azureSubscription: 'ARM Service connection'
-              ScriptType: 'FilePath'
-              ScriptPath: 'https://raw.githubusercontent.com/Neorath/ssp2020templates/master/CheckForDeletion.ps1'
+              ScriptType: 'InlineScript'
+              Inline: |
+                $Parameters = @{
+                    ResourcegroupName     = "ssp2020rg"
+                    Templatefile          = "https://raw.githubusercontent.com/Neorath/ssp2020templates/master/template.json"
+                    Mode                  = 'Complete'
+                }
+                $Result = Get-AzResourceGroupDeploymentWhatIfResult @Parameters
+                $Deleted = $result.Changes | Where-Object { $_.ChangeType -eq 'Delete' }
+                if ($Deleted.Count -gt 0) {
+                    Throw "$($Deleted.Count) resources would be removed"
+                }
               ScriptArguments: '-ResourceGroup ARMDeploymentTest'
               FailOnStandardError: true
               azurePowerShellVersion: 'LatestVersion'
