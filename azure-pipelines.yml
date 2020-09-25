@@ -22,7 +22,7 @@ stages:
               resourceGroupName: 'ssp2020rg'
               location: 'West Europe'
               templateLocation: 'URL of the file'
-              csmFileLink: '$(Build.SourcesDirectory)/template.json'
+              csmFileLink: 'https://raw.githubusercontent.com/Neorath/ssp2020templates/master/template.json'
               deploymentMode: 'Validation'
           - task: PowerShell@2
             inputs:
@@ -41,7 +41,7 @@ stages:
                 
                 $Parameters = @{
                   ResourcegroupName     = "ssp2020rg"
-                  Templatefile          = "$(Build.SourcesDirectory)/template.json"
+                  Templatefile          = "https://raw.githubusercontent.com/Neorath/ssp2020templates/master/template.json"
                   Mode                  = 'Incremental'
                  }
                 $Result = Get-AzResourceGroupDeploymentWhatIfResult @Parameters
@@ -52,7 +52,7 @@ stages:
             inputs:
               azureSubscription: 'ARM Service connection'
               ScriptType: 'FilePath'
-              ScriptPath: '$(Build.SourcesDirectory)/CheckForDeletion.ps1'
+              ScriptPath: 'https://raw.githubusercontent.com/Neorath/ssp2020templates/master/CheckForDeletion.ps1'
               ScriptArguments: '-ResourceGroup ARMDeploymentTest'
               FailOnStandardError: true
               azurePowerShellVersion: 'LatestVersion'
