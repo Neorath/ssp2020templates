@@ -1,0 +1,58 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+
+trigger:
+- "*"
+
+stages:
+  - stage: test
+    jobs:
+      - job: 'validateandtest'
+        pool:
+          vmimage: windows-latest
+        steps:
+          - task: AzureResourceManagerTemplateDeployment@3
+            inputs:
+              deploymentScope: 'Resource Group'
+              azureResourceManagerConnection: 'ARM Service connection'
+              subscriptionId: '031a1f77-0f68-4bba-8d48-d3684e48acd1'
+              action: 'Create Or Update Resource Group'
+              resourceGroupName: 'ssp2020rg'
+              location: 'West Europe'
+              templateLocation: 'URL of the file'
+              csmFileLink: '$(Build.SourcesDirectory)/template.json'
+              deploymentMode: 'Validation'
+          - task: PowerShell@2
+            inputs:
+              targetType: 'inline'
+              script: |
+                # Write your PowerShell commands here.
+                
+                Install-Module Az.Resources -RequiredVersion 1.12.1-preview -AllowPrerelease -Force -Scope CurrentUser
+          - task: AzurePowerShell@5
+            inputs:
+              azureSubscription: 'ARM Service connection'
+              ScriptType: 'InlineScript'
+              Inline: |
+                # You can write your azure powershell scripts inline here. 
+                # You can also pass predefined and custom variables to this script using arguments
+                
+                $Parameters = @{
+                  ResourcegroupName     = "ssp2020rg"
+                  Templatefile          = "$(Build.SourcesDirectory)/template.json"
+                  Mode                  = 'Incremental'
+                 }
+                $Result = Get-AzResourceGroupDeploymentWhatIfResult @Parameters
+                $Result
+              azurePowerShellVersion: 'LatestVersion'
+          - task: AzurePowerShell@5
+            displayName: "Check for deletion"
+            inputs:
+              azureSubscription: 'ARM Service connection'
+              ScriptType: 'FilePath'
+              ScriptPath: '$(Build.SourcesDirectory)/CheckForDeletion.ps1'
+              ScriptArguments: '-ResourceGroup ARMDeploymentTest'
+              FailOnStandardError: true
+              azurePowerShellVersion: 'LatestVersion'
