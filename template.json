@@ -10,6 +10,14 @@
             "defaultValue": "ssp2020asp",
             "type": "String"
         },
+        "namespaces_ssp2020sb_name": {
+            "defaultValue": "ssp2020sb",
+            "type": "String"
+        },
+        "vaults_ssp2020fappvault_name": {
+            "defaultValue": "ssp2020fappvault",
+            "type": "String"
+        },
         "storageAccounts_ssp2020storage_name": {
             "defaultValue": "ssp2020storage",
             "type": "String"
@@ -18,8 +26,94 @@
     "variables": {},
     "resources": [
         {
+            "type": "Microsoft.KeyVault/vaults",
+            "apiVersion": "2016-10-01",
+            "name": "[parameters('vaults_ssp2020fappvault_name')]",
+            "location": "westeurope",
+            "properties": {
+                "sku": {
+                    "family": "A",
+                    "name": "Standard"
+                },
+                "tenantId": "ad78d191-1044-4303-8212-b6f4dd7874bc",
+                "accessPolicies": [
+                    {
+                        "tenantId": "ad78d191-1044-4303-8212-b6f4dd7874bc",
+                        "objectId": "554a27e5-da28-42f8-b593-b2ed0f187d2c",
+                        "permissions": {
+                            "keys": [
+                                "Get",
+                                "List",
+                                "Update",
+                                "Create",
+                                "Import",
+                                "Delete",
+                                "Recover",
+                                "Backup",
+                                "Restore"
+                            ],
+                            "secrets": [
+                                "Get",
+                                "List",
+                                "Set",
+                                "Delete",
+                                "Recover",
+                                "Backup",
+                                "Restore"
+                            ],
+                            "certificates": [
+                                "Get",
+                                "List",
+                                "Update",
+                                "Create",
+                                "Import",
+                                "Delete",
+                                "Recover",
+                                "Backup",
+                                "Restore",
+                                "ManageContacts",
+                                "ManageIssuers",
+                                "GetIssuers",
+                                "ListIssuers",
+                                "SetIssuers",
+                                "DeleteIssuers"
+                            ]
+                        }
+                    },
+                    {
+                        "tenantId": "ad78d191-1044-4303-8212-b6f4dd7874bc",
+                        "objectId": "2a03b489-13ee-4f5f-ad9c-9dd08b2ec474",
+                        "permissions": {
+                            "keys": [],
+                            "secrets": [
+                                "Get",
+                                "List"
+                            ],
+                            "certificates": []
+                        }
+                    }
+                ],
+                "enabledForDeployment": true,
+                "enabledForDiskEncryption": true,
+                "enabledForTemplateDeployment": true
+            }
+        },
+        {
+            "type": "Microsoft.ServiceBus/namespaces",
+            "apiVersion": "2018-01-01-preview",
+            "name": "[parameters('namespaces_ssp2020sb_name')]",
+            "location": "West Europe",
+            "sku": {
+                "name": "Basic",
+                "tier": "Basic"
+            },
+            "properties": {
+                "zoneRedundant": false
+            }
+        },
+        {
             "type": "Microsoft.Storage/storageAccounts",
-            "apiVersion": "2019-06-01",
+            "apiVersion": "2020-08-01-preview",
             "name": "[parameters('storageAccounts_ssp2020storage_name')]",
             "location": "westeurope",
             "sku": {
@@ -78,8 +172,76 @@
             }
         },
         {
+            "type": "Microsoft.KeyVault/vaults/secrets",
+            "apiVersion": "2016-10-01",
+            "name": "[concat(parameters('vaults_ssp2020fappvault_name'), '/ConnectionStrings--AzureWebJobsStorage')]",
+            "location": "westeurope",
+            "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults', parameters('vaults_ssp2020fappvault_name'))]"
+            ],
+            "properties": {
+                "attributes": {
+                    "enabled": true
+                }
+            }
+        },
+        {
+            "type": "Microsoft.ServiceBus/namespaces/AuthorizationRules",
+            "apiVersion": "2017-04-01",
+            "name": "[concat(parameters('namespaces_ssp2020sb_name'), '/RootManageSharedAccessKey')]",
+            "location": "West Europe",
+            "dependsOn": [
+                "[resourceId('Microsoft.ServiceBus/namespaces', parameters('namespaces_ssp2020sb_name'))]"
+            ],
+            "properties": {
+                "rights": [
+                    "Listen",
+                    "Manage",
+                    "Send"
+                ]
+            }
+        },
+        {
+            "type": "Microsoft.ServiceBus/namespaces/networkRuleSets",
+            "apiVersion": "2018-01-01-preview",
+            "name": "[concat(parameters('namespaces_ssp2020sb_name'), '/default')]",
+            "location": "West Europe",
+            "dependsOn": [
+                "[resourceId('Microsoft.ServiceBus/namespaces', parameters('namespaces_ssp2020sb_name'))]"
+            ],
+            "properties": {
+                "defaultAction": "Deny",
+                "virtualNetworkRules": [],
+                "ipRules": []
+            }
+        },
+        {
+            "type": "Microsoft.ServiceBus/namespaces/queues",
+            "apiVersion": "2018-01-01-preview",
+            "name": "[concat(parameters('namespaces_ssp2020sb_name'), '/outqueue')]",
+            "location": "West Europe",
+            "dependsOn": [
+                "[resourceId('Microsoft.ServiceBus/namespaces', parameters('namespaces_ssp2020sb_name'))]"
+            ],
+            "properties": {
+                "lockDuration": "PT30S",
+                "maxSizeInMegabytes": 1024,
+                "requiresDuplicateDetection": false,
+                "requiresSession": false,
+                "defaultMessageTimeToLive": "P5D",
+                "deadLetteringOnMessageExpiration": false,
+                "enableBatchedOperations": true,
+                "duplicateDetectionHistoryTimeWindow": "PT10M",
+                "maxDeliveryCount": 10,
+                "status": "Active",
+                "autoDeleteOnIdle": "P10675199DT2H48M5.4775807S",
+                "enablePartitioning": false,
+                "enableExpress": false
+            }
+        },
+        {
             "type": "Microsoft.Storage/storageAccounts/blobServices",
-            "apiVersion": "2019-06-01",
+            "apiVersion": "2020-08-01-preview",
             "name": "[concat(parameters('storageAccounts_ssp2020storage_name'), '/default')]",
             "dependsOn": [
                 "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccounts_ssp2020storage_name'))]"
@@ -99,7 +261,7 @@
         },
         {
             "type": "Microsoft.Storage/storageAccounts/fileServices",
-            "apiVersion": "2019-06-01",
+            "apiVersion": "2020-08-01-preview",
             "name": "[concat(parameters('storageAccounts_ssp2020storage_name'), '/default')]",
             "dependsOn": [
                 "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccounts_ssp2020storage_name'))]"
@@ -109,6 +271,9 @@
                 "tier": "Standard"
             },
             "properties": {
+                "protocolSettings": {
+                    "smb": {}
+                },
                 "cors": {
                     "corsRules": []
                 }
@@ -116,7 +281,7 @@
         },
         {
             "type": "Microsoft.Storage/storageAccounts/queueServices",
-            "apiVersion": "2019-06-01",
+            "apiVersion": "2020-08-01-preview",
             "name": "[concat(parameters('storageAccounts_ssp2020storage_name'), '/default')]",
             "dependsOn": [
                 "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccounts_ssp2020storage_name'))]"
@@ -129,7 +294,7 @@
         },
         {
             "type": "Microsoft.Storage/storageAccounts/tableServices",
-            "apiVersion": "2019-06-01",
+            "apiVersion": "2020-08-01-preview",
             "name": "[concat(parameters('storageAccounts_ssp2020storage_name'), '/default')]",
             "dependsOn": [
                 "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccounts_ssp2020storage_name'))]"
@@ -149,6 +314,11 @@
                 "[resourceId('Microsoft.Web/serverfarms', parameters('serverfarms_ssp2020asp_name'))]"
             ],
             "kind": "functionapp",
+            "identity": {
+                "principalId": "2a03b489-13ee-4f5f-ad9c-9dd08b2ec474",
+                "tenantId": "ad78d191-1044-4303-8212-b6f4dd7874bc",
+                "type": "SystemAssigned"
+            },
             "properties": {
                 "enabled": true,
                 "hostNameSslStates": [
@@ -202,12 +372,13 @@
                 "phpVersion": "5.6",
                 "requestTracingEnabled": false,
                 "remoteDebuggingEnabled": false,
+                "remoteDebuggingVersion": "VS2019",
                 "httpLoggingEnabled": false,
                 "logsDirectorySizeLimit": 35,
                 "detailedErrorLoggingEnabled": false,
                 "publishingUsername": "$ssp2020fapp",
                 "azureStorageAccounts": {},
-                "scmType": "None",
+                "scmType": "VSTSRM",
                 "use32BitWorkerProcess": true,
                 "webSocketsEnabled": false,
                 "alwaysOn": false,
@@ -233,6 +404,7 @@
                     "supportCredentials": false
                 },
                 "localMySqlEnabled": false,
+                "managedServiceIdentityId": 17521,
                 "ipSecurityRestrictions": [
                     {
                         "ipAddress": "Any",
@@ -259,6 +431,149 @@
             }
         },
         {
+            "type": "Microsoft.Web/sites/deployments",
+            "apiVersion": "2018-11-01",
+            "name": "[concat(parameters('sites_ssp2020fapp_name'), '/5c4186558c434913b46e1146b5310468')]",
+            "location": "West Europe",
+            "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', parameters('sites_ssp2020fapp_name'))]"
+            ],
+            "properties": {
+                "status": 4,
+                "author_email": "N/A",
+                "author": "N/A",
+                "deployer": "VSTS",
+                "message": "{\"type\":\"deployment\",\"commitId\":\"47616dba627f23ef11731c20d94937705b2511fc\",\"buildId\":\"23\",\"buildNumber\":\"20210203.1\",\"repoProvider\":\"TfsGit\",\"repoName\":\"ssp2020devops\",\"collectionUrl\":\"https://dev.azure.com/585708/\",\"teamProject\":\"dc5669ac-68a3-4f84-babd-21022e601920\",\"buildProjectUrl\":\"https://dev.azure.com/585708/dc5669ac-68a3-4f84-babd-21022e601920\",\"repositoryUrl\":\"https://585708@dev.azure.com/585708/ssp2020devops/_git/ssp2020devops\",\"branch\":\"master\",\"teamProjectName\":\"ssp2020devops\",\"slotName\":\"production\"}",
+                "start_time": "2021-02-03T10:39:30.0080411Z",
+                "end_time": "2021-02-03T10:39:31.226876Z",
+                "active": false
+            }
+        },
+        {
+            "type": "Microsoft.Web/sites/deployments",
+            "apiVersion": "2018-11-01",
+            "name": "[concat(parameters('sites_ssp2020fapp_name'), '/6eeccf44a4fe4fd496488e8dcd4fb8ab')]",
+            "location": "West Europe",
+            "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', parameters('sites_ssp2020fapp_name'))]"
+            ],
+            "properties": {
+                "status": 4,
+                "author_email": "N/A",
+                "author": "N/A",
+                "deployer": "VSTS",
+                "message": "{\"type\":\"deployment\",\"commitId\":\"2c80eb725e5fd8b1fb0c7388622937178fbe075d\",\"buildId\":\"24\",\"buildNumber\":\"20210204.1\",\"repoProvider\":\"TfsGit\",\"repoName\":\"ssp2020devops\",\"collectionUrl\":\"https://dev.azure.com/585708/\",\"teamProject\":\"dc5669ac-68a3-4f84-babd-21022e601920\",\"buildProjectUrl\":\"https://dev.azure.com/585708/dc5669ac-68a3-4f84-babd-21022e601920\",\"repositoryUrl\":\"https://585708@dev.azure.com/585708/ssp2020devops/_git/ssp2020devops\",\"branch\":\"master\",\"teamProjectName\":\"ssp2020devops\",\"slotName\":\"production\"}",
+                "start_time": "2021-02-04T09:51:40.9948741Z",
+                "end_time": "2021-02-04T09:51:53.7923079Z",
+                "active": true
+            }
+        },
+        {
+            "type": "Microsoft.Web/sites/deployments",
+            "apiVersion": "2018-11-01",
+            "name": "[concat(parameters('sites_ssp2020fapp_name'), '/9e62097ddae74b7c8858bef285879486')]",
+            "location": "West Europe",
+            "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', parameters('sites_ssp2020fapp_name'))]"
+            ],
+            "properties": {
+                "status": 4,
+                "author_email": "N/A",
+                "author": "N/A",
+                "deployer": "ZipDeploy",
+                "message": "Created via a push deployment",
+                "start_time": "2020-11-16T14:10:05.7946836Z",
+                "end_time": "2020-11-16T14:10:17.6391318Z",
+                "active": false
+            }
+        },
+        {
+            "type": "Microsoft.Web/sites/deployments",
+            "apiVersion": "2018-11-01",
+            "name": "[concat(parameters('sites_ssp2020fapp_name'), '/ad3bd21cfd1f477a9110aa0f10020492')]",
+            "location": "West Europe",
+            "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', parameters('sites_ssp2020fapp_name'))]"
+            ],
+            "properties": {
+                "status": 4,
+                "author_email": "N/A",
+                "author": "N/A",
+                "deployer": "VSTS",
+                "message": "{\"type\":\"deployment\",\"commitId\":\"380ece48fac52867baacbae699953fb7bfb4410c\",\"buildId\":\"21\",\"releaseId\":\"1\",\"buildNumber\":\"20200925.1\",\"releaseName\":\"Release-1\",\"repoProvider\":\"TfsGit\",\"repoName\":\"ssp2020devops\",\"collectionUrl\":\"https://dev.azure.com/585708/\",\"teamProject\":\"dc5669ac-68a3-4f84-babd-21022e601920\",\"buildProjectUrl\":\"https://dev.azure.com/585708/dc5669ac-68a3-4f84-babd-21022e601920\",\"repositoryUrl\":\"\",\"branch\":\"master\",\"teamProjectName\":\"ssp2020devops\",\"slotName\":\"production\"}",
+                "start_time": "2020-09-25T14:00:10.8179847Z",
+                "end_time": "2020-09-25T14:00:18.850155Z",
+                "active": false
+            }
+        },
+        {
+            "type": "Microsoft.Web/sites/deployments",
+            "apiVersion": "2018-11-01",
+            "name": "[concat(parameters('sites_ssp2020fapp_name'), '/cf35230320ca45f0ae9c5983c78f07c6')]",
+            "location": "West Europe",
+            "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', parameters('sites_ssp2020fapp_name'))]"
+            ],
+            "properties": {
+                "status": 4,
+                "author_email": "N/A",
+                "author": "N/A",
+                "deployer": "VSTS",
+                "message": "{\"type\":\"deployment\",\"commitId\":\"380ece48fac52867baacbae699953fb7bfb4410c\",\"buildId\":\"21\",\"buildNumber\":\"20200925.1\",\"repoProvider\":\"TfsGit\",\"repoName\":\"ssp2020devops\",\"collectionUrl\":\"https://dev.azure.com/585708/\",\"teamProject\":\"dc5669ac-68a3-4f84-babd-21022e601920\",\"buildProjectUrl\":\"https://dev.azure.com/585708/dc5669ac-68a3-4f84-babd-21022e601920\",\"repositoryUrl\":\"https://585708@dev.azure.com/585708/ssp2020devops/_git/ssp2020devops\",\"branch\":\"master\",\"teamProjectName\":\"ssp2020devops\",\"slotName\":\"production\"}",
+                "start_time": "2020-09-25T13:58:17.8425556Z",
+                "end_time": "2020-09-25T13:58:27.9529384Z",
+                "active": false
+            }
+        },
+        {
+            "type": "Microsoft.Web/sites/functions",
+            "apiVersion": "2018-11-01",
+            "name": "[concat(parameters('sites_ssp2020fapp_name'), '/ProcessImageAsync')]",
+            "location": "West Europe",
+            "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', parameters('sites_ssp2020fapp_name'))]"
+            ],
+            "properties": {
+                "script_root_path_href": "https://ssp2020fapp.azurewebsites.net/admin/vfs/site/wwwroot/ProcessImageAsync/",
+                "script_href": "https://ssp2020fapp.azurewebsites.net/admin/vfs/site/wwwroot/bin/ssp2020fapp.dll",
+                "config_href": "https://ssp2020fapp.azurewebsites.net/admin/vfs/site/wwwroot/ProcessImageAsync/function.json",
+                "href": "https://ssp2020fapp.azurewebsites.net/admin/functions/ProcessImageAsync",
+                "config": {}
+            }
+        },
+        {
+            "type": "Microsoft.Web/sites/functions",
+            "apiVersion": "2018-11-01",
+            "name": "[concat(parameters('sites_ssp2020fapp_name'), '/Search')]",
+            "location": "West Europe",
+            "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', parameters('sites_ssp2020fapp_name'))]"
+            ],
+            "properties": {
+                "script_root_path_href": "https://ssp2020fapp.azurewebsites.net/admin/vfs/site/wwwroot/Search/",
+                "script_href": "https://ssp2020fapp.azurewebsites.net/admin/vfs/site/wwwroot/bin/ssp2020fapp.dll",
+                "config_href": "https://ssp2020fapp.azurewebsites.net/admin/vfs/site/wwwroot/Search/function.json",
+                "href": "https://ssp2020fapp.azurewebsites.net/admin/functions/Search",
+                "config": {}
+            }
+        },
+        {
+            "type": "Microsoft.Web/sites/functions",
+            "apiVersion": "2018-11-01",
+            "name": "[concat(parameters('sites_ssp2020fapp_name'), '/StatusCheck')]",
+            "location": "West Europe",
+            "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', parameters('sites_ssp2020fapp_name'))]"
+            ],
+            "properties": {
+                "script_root_path_href": "https://ssp2020fapp.azurewebsites.net/admin/vfs/site/wwwroot/StatusCheck/",
+                "script_href": "https://ssp2020fapp.azurewebsites.net/admin/vfs/site/wwwroot/bin/ssp2020fapp.dll",
+                "config_href": "https://ssp2020fapp.azurewebsites.net/admin/vfs/site/wwwroot/StatusCheck/function.json",
+                "href": "https://ssp2020fapp.azurewebsites.net/admin/functions/StatusCheck",
+                "config": {}
+            }
+        },
+        {
             "type": "Microsoft.Web/sites/hostNameBindings",
             "apiVersion": "2018-11-01",
             "name": "[concat(parameters('sites_ssp2020fapp_name'), '/', parameters('sites_ssp2020fapp_name'), '.azurewebsites.net')]",
@@ -273,7 +588,7 @@
         },
         {
             "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
-            "apiVersion": "2019-06-01",
+            "apiVersion": "2020-08-01-preview",
             "name": "[concat(parameters('storageAccounts_ssp2020storage_name'), '/default/azure-webjobs-hosts')]",
             "dependsOn": [
                 "[resourceId('Microsoft.Storage/storageAccounts/blobServices', parameters('storageAccounts_ssp2020storage_name'), 'default')]",
@@ -287,7 +602,7 @@
         },
         {
             "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
-            "apiVersion": "2019-06-01",
+            "apiVersion": "2020-08-01-preview",
             "name": "[concat(parameters('storageAccounts_ssp2020storage_name'), '/default/azure-webjobs-secrets')]",
             "dependsOn": [
                 "[resourceId('Microsoft.Storage/storageAccounts/blobServices', parameters('storageAccounts_ssp2020storage_name'), 'default')]",
@@ -301,7 +616,7 @@
         },
         {
             "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
-            "apiVersion": "2019-06-01",
+            "apiVersion": "2020-08-01-preview",
             "name": "[concat(parameters('storageAccounts_ssp2020storage_name'), '/default/ssp2020blob')]",
             "dependsOn": [
                 "[resourceId('Microsoft.Storage/storageAccounts/blobServices', parameters('storageAccounts_ssp2020storage_name'), 'default')]",
@@ -310,12 +625,12 @@
             "properties": {
                 "defaultEncryptionScope": "$account-encryption-key",
                 "denyEncryptionScopeOverride": false,
-                "publicAccess": "Blob"
+                "publicAccess": "None"
             }
         },
         {
             "type": "Microsoft.Storage/storageAccounts/queueServices/queues",
-            "apiVersion": "2019-06-01",
+            "apiVersion": "2020-08-01-preview",
             "name": "[concat(parameters('storageAccounts_ssp2020storage_name'), '/default/ssp2020queue')]",
             "dependsOn": [
                 "[resourceId('Microsoft.Storage/storageAccounts/queueServices', parameters('storageAccounts_ssp2020storage_name'), 'default')]",

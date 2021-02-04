@@ -8,6 +8,12 @@
         "serverfarms_ssp2020asp_name": {
             "value": null
         },
+        "namespaces_ssp2020sb_name": {
+            "value": null
+        },
+        "vaults_ssp2020fappvault_name": {
+            "value": null
+        },
         "storageAccounts_ssp2020storage_name": {
             "value": null
         }
